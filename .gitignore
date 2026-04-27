@@ -1,0 +1,41 @@
+# ==========================================
+# Java / Maven Build Output
+# ==========================================
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# ==========================================
+# NetBeans Specific Files
+# ==========================================
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+
+# ==========================================
+# Other IDEs (Good practice to include)
+# ==========================================
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Logs
+# ==========================================
+*.log
+
+# Secrets
+config.properties
