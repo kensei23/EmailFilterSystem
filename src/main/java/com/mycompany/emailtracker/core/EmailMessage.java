@@ -16,12 +16,14 @@ public class EmailMessage {
     private String subject;
     private String content;
     private Date receivedDate;
+    private String category;
 
-    public EmailMessage(String sender, String subject, String content, Date receivedDate) {
+    public EmailMessage(String sender, String subject, String content, Date receivedDate, String category) {
         this.sender = sender;
         this.subject = subject;
         this.content = content;
         this.receivedDate = receivedDate;
+        this.category = category;
     }
 
     // Getters
@@ -29,6 +31,7 @@ public class EmailMessage {
     public String getSubject() { return subject; }
     public String getContent() { return content; }
     public Date getReceivedDate() { return receivedDate; }
+    public String getCategory() { return category; }
     
     // toString for easy debugging later
     @Override

@@ -132,11 +132,14 @@ public class EmailServiceImplemented implements EmailService{
                 // Extract data
                 String sender = msg.getFrom()[0].toString();
                 String subject = msg.getSubject();
+                String content = getTextFromMessage(msg); 
                 java.util.Date sentDate = msg.getSentDate();
                 
-                String content = getTextFromMessage(msg); 
+                System.out.println("Asking ML model to classify: " + subject);
+                String predictedCategory = MLClient.categoriseEmail(subject, content);
+                
 
-                EmailMessage emailObj = new EmailMessage(sender, subject, content, sentDate);
+                EmailMessage emailObj = new EmailMessage(sender, subject, content, sentDate, predictedCategory);
                 emailList.add(emailObj);
             }
 
