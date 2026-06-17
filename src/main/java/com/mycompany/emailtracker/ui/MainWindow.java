@@ -11,6 +11,8 @@ import com.mycompany.emailtracker.core.EmailServiceImplemented;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.SwingUtilities;
 import java.util.List;
+import com.mycompany.emailtracker.core.DatabaseManage; 
+import com.mycompany.emailtracker.core.EmailConfig;
 /**
  *
  * @author aaron
@@ -23,10 +25,33 @@ public class MainWindow extends javax.swing.JFrame {
     private javax.swing.table.TableRowSorter<DefaultTableModel> rowSorter;
 
     public MainWindow() {
-        initComponents(); // LEAVE THIS LINE ALONE!
+        initComponents(); 
         
-        // Add these 3 lines right under initComponents():
-        EmailConfig config = new EmailConfig(null, ""); 
+        // Initialise the DB
+        DatabaseManage.initialiseDatabase();
+        // Check if user info exists
+        String[] info = DatabaseManage.getCredentials();
+        // If no user info exists, show welcome popup
+        if(info == null){
+            System.out.println("No info found, showing user welcome screen");
+            SettingsDialog dialog = new SettingsDialog(this);
+            dialog.setVisible(true); // App pauses til Save is clicked
+            
+            // If they closed the popup without saving, close app
+            if(!dialog.isSaved()){
+                System.exit(0);
+            }
+            
+            // Get newly saved info
+            info = DatabaseManage.getCredentials();
+        }
+        
+        String userEmail = info[0];
+        String userPassword = info[1];
+        
+        System.out.println("Logging in as: " + userEmail);
+        
+        EmailConfig config = new EmailConfig(userEmail, userPassword); 
         emailService = new EmailServiceImplemented(config);
         setupTable();
         setupSearch();
@@ -258,7 +283,7 @@ public class MainWindow extends javax.swing.JFrame {
                 e.printStackTrace();
             }finally {
                 // --- 4. RESTORE UI STATE ---
-                // The 'finally' block ALWAYS runs, whether the try succeeds or fails.
+                // The finally block ALWAYS runs
                 SwingUtilities.invokeLater(() -> {
                     btnFetch.setEnabled(true);
                     btnFetch.setText("Fetch Emails"); // Make sure this matches your original button text
