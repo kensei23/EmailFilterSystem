@@ -6,11 +6,27 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
-# This dictionary will holds trained model in memory
+# Loads private variable from env file
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print("No Gemini API Key found in .env file.")
+
+# This dictionary holds trained model in memory
 ml_models = {}
 
-# The lifespan function runs one time when the server starts up
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+class DraftRequest(BaseModel):
+    email_body: str
+    category: str
+
+# This function runs one time when the server starts up
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Loading data and training the Machine Learning model...")
@@ -38,7 +54,7 @@ async def lifespan(app: FastAPI):
     )
     pipeline.fit(X, y)
     
-    # Save the trained model to our global dictionary
+    # Save the trained model to dictionary
     ml_models["pipeline"] = pipeline
     print(f"SUCCESS: Model trained on {len(df)} emails and server is ready!")
     
@@ -50,7 +66,7 @@ async def lifespan(app: FastAPI):
 # Create the API server
 app = FastAPI(title="Email ML Microservice", lifespan=lifespan)
 
-# Define the exact JSON structure we expect Java to send us
+# Define the JSON structure we expect Java to send us
 class EmailRequest(BaseModel):
     subject: str
     body: str
@@ -58,13 +74,11 @@ class EmailRequest(BaseModel):
 # Define the endpoint that Java will hit
 @app.post("/predict")
 async def predict_email(request: EmailRequest):
-    # Combine the incoming text exactly like we did during training
     combined_text = request.subject + " " + request.body
     
     # Grab the trained model
     pipeline = ml_models["pipeline"]
-    
-    # Make the prediction
+
     prediction = pipeline.predict([combined_text])[0]
     
     # Calculate how confident the AI is (0.0 to 1.0)
@@ -76,3 +90,31 @@ async def predict_email(request: EmailRequest):
         "category": str(prediction),
         "confidence": round(float(confidence), 4)
     }
+
+@app.post("/api/generate_reply")
+def generate_reply(request: DraftRequest):
+    print(f"Drafting reply for category: {request.category}")
+
+    # Prompt engineering logic
+    if request.category == "Rejection":
+        system_prompt = ("You are a professional career assistant. The user recieved a job rejection. "
+                        "Write a short 3-sentence reply thanking the recruiter for their time, "
+                        "and politely ask for feedback on how to improve for future opportunities. Do not include subject lines"
+                        )
+    elif request.category == "Action Needed":
+        system_prompt = ("You are a professional career assistant. The user received an interview request or next-steps email. "
+                        "Write a polite 3-sentence reply expressing excitement for the opportunity and stating that "
+                        "they are available for a call next week. Leave placeholders like [Insert Time] for them to fill out. Do not include subject lines."
+                        )
+    else:
+        return {"draft": "No automated reply needed for this category."}
+    
+    # Combining instructings with email content
+    full_prompt = f"{system_prompt}\n\nHere is the email to reply to:\n{request.email_body}"
+
+    try:
+         # Makes AI call
+         response = model.generate_content(full_prompt)
+         return {"draft": response.text.strip()}
+    except Exception as e:
+        return {"draft": f"Error generating reply: {str(e)}"}

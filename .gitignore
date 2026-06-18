@@ -34,9 +34,10 @@ Thumbs.db
 *.db
 
 # ==========================================
-# Logs
+# Logs and rubbish
 # ==========================================
 *.log
 
 # Secrets
 config.properties
+.env

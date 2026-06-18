@@ -8,11 +8,12 @@ import com.mycompany.emailtracker.core.EmailConfig;
 import com.mycompany.emailtracker.core.EmailMessage;
 import com.mycompany.emailtracker.core.EmailService;
 import com.mycompany.emailtracker.core.EmailServiceImplemented;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.SwingUtilities;
-import java.util.List;
 import com.mycompany.emailtracker.core.DatabaseManage; 
 import com.mycompany.emailtracker.core.EmailConfig;
+import com.mycompany.emailtracker.core.MLClient;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.*;
+import java.util.List;
 /**
  *
  * @author aaron
@@ -159,6 +160,7 @@ public class MainWindow extends javax.swing.JFrame {
         txtSearch = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
         categoryFilter = new javax.swing.JComboBox<>();
+        jButton1 = new javax.swing.JButton();
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -209,30 +211,41 @@ public class MainWindow extends javax.swing.JFrame {
         jLabel1.setText("Search");
 
         categoryFilter.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        categoryFilter.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                categoryFilterActionPerformed(evt);
+            }
+        });
+
+        jButton1.setText("Draft AI Reply");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(txtSearch, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 590, Short.MAX_VALUE)
+                    .addComponent(jScrollPane4)
                     .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(txtSearch, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 590, Short.MAX_VALUE)
-                            .addComponent(jScrollPane4)))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
                         .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(layout.createSequentialGroup()
-                .addGap(93, 93, 93)
+                .addGap(58, 58, 58)
                 .addComponent(btnFetch, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(65, 65, 65)
+                .addComponent(jButton1)
+                .addGap(75, 75, 75)
                 .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(105, 105, 105))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -248,7 +261,8 @@ public class MainWindow extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnFetch)
-                    .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton1))
                 .addContainerGap())
         );
 
@@ -297,6 +311,43 @@ public class MainWindow extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_txtSearchActionPerformed
 
+    private void categoryFilterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_categoryFilterActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_categoryFilterActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        // Check which row the user clicked on
+        int selectedRow = tblEmails.getSelectedRow();
+        
+        if(selectedRow == -1){
+            JOptionPane.showMessageDialog(this, "Please select an email from the table first.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Prevents filter bug
+        int modelRow = tblEmails.convertRowIndexToModel(selectedRow);
+        
+        // Get email data from that row
+        String subject = tblEmails.getValueAt(modelRow, 1).toString();
+        String category = tblEmails.getValueAt(modelRow, 3).toString();
+        
+        if (category.equals("Rejection") || category.equals("Action Needed")){
+            System.out.println("Asking AI to draft reply for: " + subject);
+            
+            String draft = MLClient.draftReply(subject, category);
+            
+            JTextArea textArea = new JTextArea(10, 40);
+            textArea.setText(draft);
+            textArea.setWrapStyleWord(true);
+            textArea.setLineWrap(true);
+            
+            JOptionPane.showMessageDialog(this, new JScrollPane(textArea), "AI Generated draft", JOptionPane.INFORMATION_MESSAGE);
+            
+        } else {
+            JOptionPane.showMessageDialog(this, "No AI reply needed for category: " + category, "Info:", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }//GEN-LAST:event_jButton1ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -335,6 +386,7 @@ public class MainWindow extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnFetch;
     private javax.swing.JComboBox<String> categoryFilter;
+    private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;

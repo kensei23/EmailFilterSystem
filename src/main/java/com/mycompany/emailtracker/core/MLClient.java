@@ -5,12 +5,17 @@
 package com.mycompany.emailtracker.core;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.net.URI;
+import java.net.URL;
+import java.net.HttpURLConnection;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
+import java.io.OutputStream;
 /**
  *
  * @author aaron
@@ -54,6 +59,39 @@ public class MLClient {
         } catch (Exception e) {
             System.out.println("Failed to connect to ML Server.");
             return "Uncategorised";
+        }
+    }
+    
+    public static String draftReply(String emailText, String category){
+        try{
+            URL url = new URL("http://localhost:8000/api/draft-reply");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "/application/json");
+            conn.setDoOutput(true);
+            
+            JsonObject requestJson = new JsonObject();
+            requestJson.addProperty("email_body", emailText);
+            requestJson.addProperty("category", category);
+            
+            try (OutputStream os = conn.getOutputStream()){
+                byte[] input = requestJson.toString().getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+            
+            if (conn.getResponseCode() == 200){
+                Scanner scanner = new Scanner(conn.getInputStream(), "UTF-8");
+                String responseStr = scanner.useDelimiter("\\A").next();
+                scanner.close();
+                
+                JsonObject responseJson = JsonParser.parseString(responseStr).getAsJsonObject();
+                return responseJson.get("draft").getAsString();
+            } else{
+                return "Error: Python server returned code " + conn.getResponseCode();
+            }
+            
+        } catch (Exception e) {
+            return "Connection Error: " + e.getMessage();
         }
     }
 }
