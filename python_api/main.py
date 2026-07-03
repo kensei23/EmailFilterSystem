@@ -6,21 +6,20 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
-import google.generativeai as genai
+from google import genai
 import os
 from dotenv import load_dotenv
 
 # Loads private variable from env file
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    print("No Gemini API Key found in .env file.")
+# api_key = os.getenv("GEMINI_API_KEY")
+# if not api_key:
+#     print("No Gemini API Key found in .env file.")
 
 # This dictionary holds trained model in memory
 ml_models = {}
 
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.5-flash')
+client = genai.Client()
 
 class DraftRequest(BaseModel):
     email_body: str
@@ -91,7 +90,7 @@ async def predict_email(request: EmailRequest):
         "confidence": round(float(confidence), 4)
     }
 
-@app.post("/api/generate_reply")
+@app.post("/api/draft-reply")
 def generate_reply(request: DraftRequest):
     print(f"Drafting reply for category: {request.category}")
 
@@ -114,7 +113,10 @@ def generate_reply(request: DraftRequest):
 
     try:
          # Makes AI call
-         response = model.generate_content(full_prompt)
+         response = client.models.generate_content(
+             model='gemini-2.5-flash',
+             contents =full_prompt
+         )
          return {"draft": response.text.strip()}
     except Exception as e:
         return {"draft": f"Error generating reply: {str(e)}"}

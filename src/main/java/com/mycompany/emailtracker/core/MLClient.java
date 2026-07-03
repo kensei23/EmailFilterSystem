@@ -62,34 +62,47 @@ public class MLClient {
         }
     }
     
-    public static String draftReply(String emailText, String category){
-        try{
+    public static String draftReply(String emailText, String category) {
+        try {
             URL url = new URL("http://localhost:8000/api/draft-reply");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "/application/json");
+            
+            // Clean Headers
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setRequestProperty("Accept", "application/json");
             conn.setDoOutput(true);
+
+            // Strip out internal quotes and newlines so the JSON doesn't break
+            String safeEmail = emailText.replace("\"", "\\\"").replace("\n", " ").replace("\r", "");
             
-            JsonObject requestJson = new JsonObject();
-            requestJson.addProperty("email_body", emailText);
-            requestJson.addProperty("category", category);
-            
-            try (OutputStream os = conn.getOutputStream()){
-                byte[] input = requestJson.toString().getBytes("utf-8");
+            // Manually combining it together
+            String jsonString = "{\"email_body\": \"" + safeEmail + "\", \"category\": \"" + category + "\"}";
+
+            // Send it to Python
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonString.getBytes("utf-8");
                 os.write(input, 0, input.length);
             }
-            
-            if (conn.getResponseCode() == 200){
+
+            // Get the response back
+            if (conn.getResponseCode() == 200) {
                 Scanner scanner = new Scanner(conn.getInputStream(), "UTF-8");
                 String responseStr = scanner.useDelimiter("\\A").next();
                 scanner.close();
-                
+
                 JsonObject responseJson = JsonParser.parseString(responseStr).getAsJsonObject();
                 return responseJson.get("draft").getAsString();
-            } else{
-                return "Error: Python server returned code " + conn.getResponseCode();
+                
+            } else {
+                Scanner scanner = new Scanner(conn.getErrorStream(), "UTF-8");
+                String errorStr = scanner.useDelimiter("\\A").next();
+                scanner.close();
+                
+                System.out.println("PYTHON ERROR DETAILS: " + errorStr); 
+                return "Error " + conn.getResponseCode() + ": " + errorStr; 
             }
-            
+
         } catch (Exception e) {
             return "Connection Error: " + e.getMessage();
         }
