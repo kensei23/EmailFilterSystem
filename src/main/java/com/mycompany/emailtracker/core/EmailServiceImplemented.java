@@ -29,19 +29,34 @@ public class EmailServiceImplemented implements EmailService{
     
     @Override
     public void connect(){
+        
+        // Check which provider the user has selected, then use the appropiate connection
         try {
-            System.out.println("Attempting OAuth2 Login...");
+           if("Outlook".equalsIgnoreCase(emailConfig.getProvider())){
+               connectViaOAuth();
+           } else {
+               connectViaAppPassword();
+           }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Failed to connect: " + e.getMessage());
+        }
+    }
+    
+    private void connectViaOAuth() throws Exception{
+         System.out.println("Attempting OAuth2 Login...");
 
             IAuthenticationResult result = getAuthResult();
             
             String authToken = result.accessToken();
             String email = result.account().username();
             
+            
             System.out.println("Detected Login: " + email);
             
             Properties props = new Properties();
             props.put("mail.store.protocol", "imaps");
-            props.put("mail.imaps.host", EmailConfig.HOST);
+            props.put("mail.imaps.host", emailConfig.getHost());
             props.put("mail.imaps.port", "993");
             props.put("mail.imaps.ssl.enable", "true");
             
@@ -55,14 +70,29 @@ public class EmailServiceImplemented implements EmailService{
             session.setDebug(true); 
 
             store = session.getStore("imaps");
-            store.connect(EmailConfig.HOST, email, authToken);
+            store.connect(emailConfig.getHost(), email, authToken);
 
             System.out.println("Connected to email server successfully via OAuth2.");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("Failed to connect: " + e.getMessage());
-        }
+    }
+    
+    private void connectViaAppPassword() throws Exception{
+        System.out.println("Attempting IMAP login for: " + emailConfig.getProvider());
+        
+        Properties props = new Properties();
+        props.put("mail.store.protocal", "imaps");
+        props.put("mail.imaps.host", emailConfig.getHost());
+        props.put("mail.imaps.port", "993");
+        props.put("mail.imaps.ss.enable", "true");
+        
+        props.put("mail.imaps.auth", "true");
+        
+        Session session = Session.getInstance(props);
+        session.setDebug(true);
+        
+        store = session.getStore("imaps");
+        store.connect(emailConfig.getHost(), emailConfig.getUsername(), emailConfig.getPassword());
+        
+        System.out.println("Connected to " + emailConfig.getProvider() + " successfully.");
     }
     
     private IAuthenticationResult getAuthResult() throws Exception {

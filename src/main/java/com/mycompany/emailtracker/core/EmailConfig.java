@@ -10,9 +10,9 @@ import java.util.Properties;
  * @author aaron
  */
 public class EmailConfig {
-    public static final String HOST = "outlook.office365.com";
     public static final String PROTOCOL = "imaps";
     public static final int PORT = 993;
+    
     public static String CLIENT_ID; 
     public static String AUTHORITY; 
     public static String SCOPE;
@@ -32,11 +32,13 @@ public class EmailConfig {
         
     private String username;
     private String password;
+    private String provider;
     
     
-    public EmailConfig(String username, String password){
+    public EmailConfig(String username, String password, String provider){
         this.username = username;
         this.password = password;
+        this.provider = provider;
     }
     
     
@@ -45,5 +47,22 @@ public class EmailConfig {
     }
     public String getPassword(){
         return password;
+    }
+    public String getProvider(){
+        return provider;
+    }
+    
+    
+    public String getHost(){
+        // Switch case used in case more email providers are added (like gmail here)
+        switch (provider){
+            case "iCloud":
+                return "imap.mail.me.com";
+            case "Gmail":
+                return "imap.gmail.com";
+            case "Outlook":
+            default:
+                return "outlook.office365.com";              
+        }
     }
 }

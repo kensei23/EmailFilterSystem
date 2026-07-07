@@ -30,7 +30,8 @@ public class DatabaseManage {
         String createSettingsTable = "CREATE TABLE IF NOT EXISTS settings("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "email_address TEXT NOT NULL,"
-                + "app_password TEXT NOT NULL"
+                + "app_password TEXT NOT NULL,"
+                + "provider TEXT NOT NULL"
                 + ");";
         
         try (Connection conn = connect();
@@ -38,17 +39,17 @@ public class DatabaseManage {
             
             // Execute the SQL statement
             stmt.execute(createSettingsTable);
-            System.out.println("SQLite Database connected and ready to go!");
+            System.out.println("SQLite Database connected");
             
         } catch (SQLException e) {
             System.out.println("Failed to build database: " + e.getMessage());
         }
     }
     
-    public static void saveCredentials(String email, String password){
+    public static void saveCredentials(String email, String password, String provider){
         // Deletes previous credentials
         String clearSQL = "DELETE FROM settings";
-        String insertSQL = "INSERT INTO settings(email_address, app_password) VALUES(?, ?)";
+        String insertSQL = "INSERT INTO settings(email_address, app_password, provider) VALUES(?, ?, ?)";
         
         try (Connection conn = connect();
              Statement clearStmt = conn.createStatement();
@@ -60,6 +61,7 @@ public class DatabaseManage {
             // Insert new email + password
             insertStmt.setString(1, email);
             insertStmt.setString(2, password);
+            insertStmt.setString(3, provider);
             insertStmt.executeUpdate();
             
             System.out.println("Information saved to database");
@@ -70,7 +72,7 @@ public class DatabaseManage {
     }
     
     public static String[] getCredentials() {
-        String selectSQL = "SELECT email_address, app_password FROM settings LIMIT 1";
+        String selectSQL = "SELECT email_address, app_password, provider FROM settings LIMIT 1";
         
         try (Connection conn = connect();
             Statement stmt = conn.createStatement();
@@ -80,7 +82,8 @@ public class DatabaseManage {
             if(rs.next()){
                 String email = rs.getString("email_address");
                 String password = rs.getString("app_password");
-                return new String[]{email, password};
+                String provider = rs.getString("provider");
+                return new String[]{email, password, provider};
             }
         } catch(SQLException e){
             System.out.println("Error loading information: " + e.getMessage());

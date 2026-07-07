@@ -11,6 +11,7 @@ import com.mycompany.emailtracker.core.EmailServiceImplemented;
 import com.mycompany.emailtracker.core.DatabaseManage; 
 import com.mycompany.emailtracker.core.EmailConfig;
 import com.mycompany.emailtracker.core.MLClient;
+import com.mycompany.emailtracker.ui.SettingsDialog;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
 import java.util.List;
@@ -28,6 +29,60 @@ public class MainWindow extends javax.swing.JFrame {
     public MainWindow() {
         initComponents(); 
         
+        DatabaseManage.initialiseDatabase();       
+        String[] credentials = DatabaseManage.getCredentials();
+        
+        if(credentials == null){
+            System.out.println("No user found. Login screen opening...");
+            SettingsDialog loginScreen = new SettingsDialog(this);
+            loginScreen.setVisible(true);
+            
+            // Try getting them again after the user Saves
+            credentials = DatabaseManage.getCredentials();
+            
+            // If they closed the window without saving, stop the app
+            if(credentials == null){
+                System.out.println("Login cancelled.");
+                return;
+            }
+        }
+        
+        String dbEmail = credentials[0];
+        String dbPassword = credentials[1];
+        String dbProvider = credentials[2];
+        
+        System.out.println("Logging in as: " + dbEmail + " via " + dbProvider);
+        
+        EmailConfig emailConfig = new EmailConfig(dbEmail, dbPassword, dbProvider);
+        emailService = new EmailServiceImplemented(emailConfig);
+        
+        // Get and show all emails when the UI is shown -- Updated with new login window
+        new Thread(() -> {
+            try {
+                emailService.connect();
+
+                currentEmails = emailService.fetchEmails();
+
+                SwingUtilities.invokeLater(() -> {
+                    DefaultTableModel model = (DefaultTableModel) tblEmails.getModel();
+                    model.setRowCount(0);
+
+                    for (EmailMessage email : currentEmails) {
+                        Object[] rowData = {
+                            email.getSender(),
+                            email.getSubject(),
+                            email.getReceivedDate(),
+                            email.getCategory()
+                        };
+                        model.addRow(rowData);
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+
         // Initialise the DB
         DatabaseManage.initialiseDatabase();
         // Check if user info exists
@@ -49,10 +104,11 @@ public class MainWindow extends javax.swing.JFrame {
         
         String userEmail = info[0];
         String userPassword = info[1];
+        String userProvider = info[2];
         
         System.out.println("Logging in as: " + userEmail);
         
-        EmailConfig config = new EmailConfig(userEmail, userPassword); 
+        EmailConfig config = new EmailConfig(userEmail, userPassword, userProvider); 
         emailService = new EmailServiceImplemented(config);
         setupTable();
         setupSearch();
@@ -152,7 +208,6 @@ public class MainWindow extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
         jTextField1 = new javax.swing.JTextField();
-        btnFetch = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
         tblEmails = new javax.swing.JTable();
         jScrollPane4 = new javax.swing.JScrollPane();
@@ -178,14 +233,6 @@ public class MainWindow extends javax.swing.JFrame {
         jTextField1.setText("jTextField1");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        btnFetch.setText("Fetch Emails");
-        btnFetch.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
-        btnFetch.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnFetchActionPerformed(evt);
-            }
-        });
 
         tblEmails.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -239,9 +286,7 @@ public class MainWindow extends javax.swing.JFrame {
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(layout.createSequentialGroup()
-                .addGap(58, 58, 58)
-                .addComponent(btnFetch, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(65, 65, 65)
+                .addGap(244, 244, 244)
                 .addComponent(jButton1)
                 .addGap(75, 75, 75)
                 .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -260,7 +305,6 @@ public class MainWindow extends javax.swing.JFrame {
                 .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnFetch)
                     .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton1))
                 .addContainerGap())
@@ -268,44 +312,6 @@ public class MainWindow extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    private void btnFetchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFetchActionPerformed
-        new Thread(() -> {
-            try {
-                emailService.connect();
-                
-                // UPDATE THIS LINE: Save the result to our class variable
-                currentEmails = emailService.fetchEmails();
-
-                SwingUtilities.invokeLater(() -> {
-                    DefaultTableModel model = (DefaultTableModel) tblEmails.getModel();
-                    model.setRowCount(0); 
-                    
-                    // UPDATE THIS LINE: Loop through currentEmails
-                    for (EmailMessage email : currentEmails) {
-                        Object[] rowData = {
-                            email.getSender(), 
-                            email.getSubject(), 
-                            email.getReceivedDate(),
-                            email.getCategory()
-                        };
-                        model.addRow(rowData);
-                    }
-                });
-                
-            } catch (Exception e) {
-                e.printStackTrace();
-            }finally {
-                // --- 4. RESTORE UI STATE ---
-                // The finally block ALWAYS runs
-                SwingUtilities.invokeLater(() -> {
-                    btnFetch.setEnabled(true);
-                    btnFetch.setText("Fetch Emails"); // Make sure this matches your original button text
-                    setCursor(java.awt.Cursor.getDefaultCursor());
-                });
-            }
-        }).start();
-    }//GEN-LAST:event_btnFetchActionPerformed
 
     private void txtSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSearchActionPerformed
         // TODO add your handling code here:
@@ -384,7 +390,6 @@ public class MainWindow extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnFetch;
     private javax.swing.JComboBox<String> categoryFilter;
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
