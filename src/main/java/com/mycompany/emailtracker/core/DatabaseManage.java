@@ -92,4 +92,16 @@ public class DatabaseManage {
         // Return null if DB is empty
         return null;
     }
+    
+    public static void clearCredentials(){
+        String clearSQL = "DELETE FROM settings";
+        try (Connection conn = connect();
+             Statement clearStmt = conn.createStatement()){
+            
+             clearStmt.execute(clearSQL);
+             System.out.println("Database wiped: User did not check 'Remember me' box");
+        } catch(SQLException e){
+            System.out.println("Error wiping database: " + e.getMessage());
+        }
+    }
 }

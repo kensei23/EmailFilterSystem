@@ -6,7 +6,6 @@ package com.mycompany.emailtracker.core;
 import com.microsoft.aad.msal4j.*;
 import jakarta.mail.Session;
 import jakarta.mail.Store;
-import jakarta.mail.URLName;
 import jakarta.mail.Folder;
 import java.net.URI;
 import java.util.Collections;

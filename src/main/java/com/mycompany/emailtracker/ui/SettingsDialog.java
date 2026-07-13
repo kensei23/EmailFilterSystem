@@ -7,7 +7,6 @@ package com.mycompany.emailtracker.ui;
 import javax.swing.*;
 import java.awt.*;
 import com.mycompany.emailtracker.core.DatabaseManage; 
-import com.mycompany.emailtracker.core.EmailConfig;
 /**
  *
  * @author aaron
@@ -18,6 +17,8 @@ public class SettingsDialog extends JDialog {
     private JLabel lblPassword;
     private JComboBox<String> providerDropdown;
     private boolean isSaved = false;
+    private JCheckBox chkRememberMe;
+    private String[] sessionCredentials;
     
     public SettingsDialog(JFrame parent){
         super(parent, "Welcome Setup", true);
@@ -25,11 +26,11 @@ public class SettingsDialog extends JDialog {
     }
     
     private void setupUI(){
-        setSize(350, 200);
+        setSize(350, 250);
         setLocationRelativeTo(getParent());
         setLayout(new BorderLayout());
         
-        JPanel inputPanel = new JPanel(new GridLayout(3, 2, 10, 20));
+        JPanel inputPanel = new JPanel(new GridLayout(4, 2, 10, 20));
         inputPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
         inputPanel.add(new JLabel("EmailProvider:"));
@@ -43,11 +44,17 @@ public class SettingsDialog extends JDialog {
         
         lblPassword = new JLabel("App Password:");
         txtPassword = new JPasswordField();
+        
         // Initially hidden (as Outlook doesn't require an app password for OAuth)
         lblPassword.setVisible(false);
         txtPassword.setVisible(false);
         inputPanel.add(lblPassword);
         inputPanel.add(txtPassword);
+        
+        inputPanel.add(new JLabel(""));
+        chkRememberMe = new JCheckBox("Remember Me");
+        chkRememberMe.setSelected(true);
+        inputPanel.add(chkRememberMe);
 
         // Changes visibility based on which provider is selected   
         providerDropdown.addActionListener(e -> {
@@ -96,9 +103,20 @@ public class SettingsDialog extends JDialog {
             password = "OAUTH_LOGIN";
         }
         
-        DatabaseManage.saveCredentials(email, password, provider);
+        sessionCredentials = new String[]{email, password, provider};
+        
+        if(chkRememberMe.isSelected()){
+            DatabaseManage.saveCredentials(email, password, provider);
+        } else{
+            DatabaseManage.clearCredentials();
+        }
+
         isSaved = true;
         dispose();
+    }
+    
+    public String[] getSessionCredentials(){
+        return sessionCredentials;
     }
     
     public boolean isSaved(){

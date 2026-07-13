@@ -12,14 +12,6 @@ import com.mycompany.emailtracker.ui.MainWindow;
 public class EmailTracker {
 
     public static void main(String[] args) {
-//        System.out.println("--- Starting Connection Test ---");
-//
-//        EmailConfig config = new EmailConfig(null, "");
-//        EmailService service = new EmailServiceImplemented(config);
-//        service.connect();
-//        service.fetchEmails();
-//        
-//        System.out.println("--- Test Finished ---");
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 // Create the window and make it visible

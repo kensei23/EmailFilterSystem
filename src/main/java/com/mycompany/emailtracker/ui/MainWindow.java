@@ -4,14 +4,12 @@ package com.mycompany.emailtracker.ui;
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-import com.mycompany.emailtracker.core.EmailConfig;
 import com.mycompany.emailtracker.core.EmailMessage;
 import com.mycompany.emailtracker.core.EmailService;
 import com.mycompany.emailtracker.core.EmailServiceImplemented;
 import com.mycompany.emailtracker.core.DatabaseManage; 
 import com.mycompany.emailtracker.core.EmailConfig;
 import com.mycompany.emailtracker.core.MLClient;
-import com.mycompany.emailtracker.ui.SettingsDialog;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.*;
 import java.util.List;
@@ -36,15 +34,13 @@ public class MainWindow extends javax.swing.JFrame {
             System.out.println("No user found. Login screen opening...");
             SettingsDialog loginScreen = new SettingsDialog(this);
             loginScreen.setVisible(true);
-            
-            // Try getting them again after the user Saves
-            credentials = DatabaseManage.getCredentials();
-            
-            // If they closed the window without saving, stop the app
-            if(credentials == null){
+         
+            if(!loginScreen.isSaved()){
                 System.out.println("Login cancelled.");
-                return;
+                System.exit(0);
             }
+            
+            credentials = loginScreen.getSessionCredentials();
         }
         
         String dbEmail = credentials[0];
@@ -56,63 +52,13 @@ public class MainWindow extends javax.swing.JFrame {
         EmailConfig emailConfig = new EmailConfig(dbEmail, dbPassword, dbProvider);
         emailService = new EmailServiceImplemented(emailConfig);
         
-        // Get and show all emails when the UI is shown -- Updated with new login window
-        new Thread(() -> {
-            try {
-                emailService.connect();
-
-                currentEmails = emailService.fetchEmails();
-
-                SwingUtilities.invokeLater(() -> {
-                    DefaultTableModel model = (DefaultTableModel) tblEmails.getModel();
-                    model.setRowCount(0);
-
-                    for (EmailMessage email : currentEmails) {
-                        Object[] rowData = {
-                            email.getSender(),
-                            email.getSubject(),
-                            email.getReceivedDate(),
-                            email.getCategory()
-                        };
-                        model.addRow(rowData);
-                    }
-                });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-
-        // Initialise the DB
-        DatabaseManage.initialiseDatabase();
-        // Check if user info exists
-        String[] info = DatabaseManage.getCredentials();
-        // If no user info exists, show welcome popup
-        if(info == null){
-            System.out.println("No info found, showing user welcome screen");
-            SettingsDialog dialog = new SettingsDialog(this);
-            dialog.setVisible(true); // App pauses til Save is clicked
-            
-            // If they closed the popup without saving, close app
-            if(!dialog.isSaved()){
-                System.exit(0);
-            }
-            
-            // Get newly saved info
-            info = DatabaseManage.getCredentials();
-        }
-        
-        String userEmail = info[0];
-        String userPassword = info[1];
-        String userProvider = info[2];
-        
-        System.out.println("Logging in as: " + userEmail);
-        
-        EmailConfig config = new EmailConfig(userEmail, userPassword, userProvider); 
-        emailService = new EmailServiceImplemented(config);
         setupTable();
         setupSearch();
         setupDropdown();
+        
+        // Get and show all emails when the UI is shown -- Updated with new login window
+        refreshEmails(true);
+
     }
     
     private void setupTable() {
@@ -191,7 +137,7 @@ public class MainWindow extends javax.swing.JFrame {
         if (text.trim().length() == 0) {
             rowSorter.setRowFilter(null); // Show everything if box is empty
         } else {
-            // (?i) makes the search case-insensitive!
+            // (?i) makes the search case-insensitive
             rowSorter.setRowFilter(javax.swing.RowFilter.regexFilter("(?i)" + text));
         }
     }
@@ -216,6 +162,7 @@ public class MainWindow extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         categoryFilter = new javax.swing.JComboBox<>();
         jButton1 = new javax.swing.JButton();
+        refreshEmailsBtn = new javax.swing.JButton();
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -271,6 +218,13 @@ public class MainWindow extends javax.swing.JFrame {
             }
         });
 
+        refreshEmailsBtn.setText("Refresh Emails");
+        refreshEmailsBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                refreshEmailsBtnActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -279,18 +233,20 @@ public class MainWindow extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(txtSearch, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 590, Short.MAX_VALUE)
-                    .addComponent(jScrollPane4)
+                    .addComponent(jScrollPane2)
+                    .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(layout.createSequentialGroup()
-                .addGap(244, 244, 244)
+                .addGap(41, 41, 41)
+                .addComponent(refreshEmailsBtn)
+                .addGap(102, 102, 102)
                 .addComponent(jButton1)
-                .addGap(75, 75, 75)
+                .addGap(93, 93, 93)
                 .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(41, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -306,7 +262,8 @@ public class MainWindow extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(categoryFilter, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1))
+                    .addComponent(jButton1)
+                    .addComponent(refreshEmailsBtn))
                 .addContainerGap())
         );
 
@@ -354,9 +311,49 @@ public class MainWindow extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
+    private void refreshEmailsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_refreshEmailsBtnActionPerformed
+        refreshEmails(false);
+    }//GEN-LAST:event_refreshEmailsBtnActionPerformed
+
     /**
      * @param args the command line arguments
      */
+    
+    // Added boolean to stop the repeated authentication
+    private void refreshEmails(boolean isFirstLoad){
+        System.out.println("Re-fetching emails");
+        
+        new Thread(() -> {
+            try {
+                
+                if(isFirstLoad){
+                    System.out.println("Authenticating connection");
+                    emailService.connect();
+                }
+                
+                currentEmails = emailService.fetchEmails();
+                
+                SwingUtilities.invokeLater(() -> {
+                    DefaultTableModel model = (DefaultTableModel) tblEmails.getModel();
+                    model.setRowCount(0); // Clears old emails
+                    
+                    for (EmailMessage email: currentEmails) {
+                         Object[] rowData = {
+                             email.getSender(),
+                             email.getSubject(),
+                             email.getReceivedDate(),
+                             email.getCategory()
+                         };
+                         model.addRow(rowData);
+                    }
+                    System.out.println("Refresh Complete");
+                });
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -398,6 +395,7 @@ public class MainWindow extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JTable jTable1;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JButton refreshEmailsBtn;
     private javax.swing.JTable tblEmails;
     private javax.swing.JEditorPane txtEmailBody;
     private javax.swing.JTextField txtSearch;
