@@ -20,6 +20,7 @@ public class DatabaseManage {
     
     // Connects to the database
     public static Connection connect() throws SQLException {
+        System.out.println("DB path: " + new java.io.File("emailtracker.db").getAbsolutePath());
         return DriverManager.getConnection(DB_URL);
     }
     
@@ -58,9 +59,11 @@ public class DatabaseManage {
             // Wipe old data
             clearStmt.execute(clearSQL);
             
+            String encryptedPassword = CryptoUtil.encrypt(password);
+            
             // Insert new email + password
             insertStmt.setString(1, email);
-            insertStmt.setString(2, password);
+            insertStmt.setString(2, encryptedPassword);
             insertStmt.setString(3, provider);
             insertStmt.executeUpdate();
             
@@ -68,6 +71,8 @@ public class DatabaseManage {
             
         } catch(SQLException e){
             System.out.println("Error saving credentials: " + e.getMessage());
+        } catch(Exception e){
+            System.out.println("Error encrypting credentials: " + e.getMessage());
         }
     }
     
@@ -81,12 +86,15 @@ public class DatabaseManage {
             // If row is found, return array with info
             if(rs.next()){
                 String email = rs.getString("email_address");
-                String password = rs.getString("app_password");
+                String encryptedPassword = rs.getString("app_password");
                 String provider = rs.getString("provider");
+                String password = CryptoUtil.decrypt(encryptedPassword);
                 return new String[]{email, password, provider};
             }
         } catch(SQLException e){
             System.out.println("Error loading information: " + e.getMessage());
+        } catch(Exception e){
+            System.out.println("Error decrypting credentials: " + e.getMessage());
         }
         
         // Return null if DB is empty

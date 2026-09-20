@@ -78,10 +78,10 @@ public class EmailServiceImplemented implements EmailService{
         System.out.println("Attempting IMAP login for: " + emailConfig.getProvider());
         
         Properties props = new Properties();
-        props.put("mail.store.protocal", "imaps");
+        props.put("mail.store.protocol", "imaps");
         props.put("mail.imaps.host", emailConfig.getHost());
         props.put("mail.imaps.port", "993");
-        props.put("mail.imaps.ss.enable", "true");
+        props.put("mail.imaps.ssl.enable", "true");
         
         props.put("mail.imaps.auth", "true");
         

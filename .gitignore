@@ -41,3 +41,4 @@ Thumbs.db
 # Secrets
 config.properties
 .env
+secret.key
