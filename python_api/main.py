@@ -90,6 +90,10 @@ async def predict_email(request: EmailRequest):
         "confidence": round(float(confidence), 4)
     }
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "model_loaded": "pipeline" in ml_models}
+
 @app.post("/api/draft-reply")
 def generate_reply(request: DraftRequest):
     print(f"Drafting reply for category: {request.category}")

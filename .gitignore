@@ -42,3 +42,4 @@ Thumbs.db
 config.properties
 .env
 secret.key
+/nbproject/
