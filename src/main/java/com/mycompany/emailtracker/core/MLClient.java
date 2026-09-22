@@ -64,7 +64,7 @@ public class MLClient {
     
     public static String draftReply(String emailText, String category) {
         try {
-            URL url = new URL("http://localhost:8000/api/draft-reply");
+            URL url = URI.create("http://localhost:8000/api/draft-reply").toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             
