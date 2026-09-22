@@ -30,7 +30,7 @@ mvn exec:java
 ```bash
 cd python_api
 pip install -r requirements.txt
-uvicorn main:app --reload
+python train_model.py
 ```
 
 Add a `.env` file in `python_api/` with `GEMINI_API_KEY=your_key_here`.
@@ -40,6 +40,19 @@ Add a `.env` file in `python_api/` with `GEMINI_API_KEY=your_key_here`.
 ## Usage
 
 As long as Python packages are installed just run on Java - the ML Client will start in the background and waits for model to finish training before opening.
+
+## Model Performance
+
+Evaluated on a held-out 20% test split (`train_model.py` prints this classification report):
+
+| Category      | Precision | Recall | F1-score |
+|---------------|-----------|--------|----------|
+| Action Needed | 0.97      | 0.93   | 0.95     |
+| Confirmation  | 0.91      | 0.99   | 0.95     |
+| Offer         | 1.00      | 1.00   | 1.00     |
+| Rejection     | 1.00      | 0.87   | 0.93     |
+
+**Overall accuracy: 95%**
 
 ## Security Notes
 

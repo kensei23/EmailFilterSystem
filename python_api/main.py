@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import pandas as pd
+import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
@@ -19,6 +20,8 @@ load_dotenv()
 # This dictionary holds trained model in memory
 ml_models = {}
 
+MODEL_PATH = "model.pkl"
+
 client = genai.Client()
 
 class DraftRequest(BaseModel):
@@ -28,59 +31,40 @@ class DraftRequest(BaseModel):
 # This function runs one time when the server starts up
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Loading data and training the Machine Learning model...")
-    
-    # Loading the dataset
-    df = pd.read_csv("final_training_data.csv")
-    df['subject'] = df['subject'].fillna('')
-    df['email_body'] = df['email_body'].fillna('')
-    
-    df['Category'] = df['Category'].replace({
-        'Interview': 'Action Needed', 
-        'Action Required': 'Action Needed'
-    })
-    
-    # Combine subject and body for the model to read
-    X = df['subject'] + " " + df['email_body']
-    y = df['Category']
-    
-    # Build and train the pipeline
-    # TfidfVectorizer: Converts words to numbers based on importance (ignores 'the', 'and', etc.)
-    # MultinomialNB: The standard Naive Bayes algorithm for text classification
-    pipeline = make_pipeline(
-        TfidfVectorizer(stop_words='english'), 
-        LogisticRegression(class_weight='balanced', max_iter=1000)
-    )
-    pipeline.fit(X, y)
-    
-    # Save the trained model to dictionary
-    ml_models["pipeline"] = pipeline
-    print(f"SUCCESS: Model trained on {len(df)} emails and server is ready!")
-    
+    print("Loading trained ML model...")
+
+    try:
+        pipeline = joblib.load(MODEL_PATH)
+        ml_models["pipeline"] = pipeline
+        print("SUCCESS: Model loaded and server is ready!")
+    except FileNotFoundError:
+        print(f"WARNING: {MODEL_PATH} not found. Run train_model.py first.")
+        print("The server will still start, but /predict will return an error until a model exists.")
+
     yield # The server runs here
-    
-    # Clean up when the server shuts down
+
     ml_models.clear()
 
 # Create the API server
 app = FastAPI(title="Email ML Microservice", lifespan=lifespan)
 
-# Define the JSON structure we expect Java to send us
 class EmailRequest(BaseModel):
     subject: str
     body: str
 
-# Define the endpoint that Java will hit
+# End point Java calls
 @app.post("/predict")
 async def predict_email(request: EmailRequest):
-    combined_text = request.subject + " " + request.body
+    if "pipeline" not in ml_models:
+        return {"category": "Uncategorised", "confidence": 0.0,
+                "error": "Model not loaded - run train_model.py first."}
     
-    # Grab the trained model
+    combined_text = request.subject + " " + request.body
+
     pipeline = ml_models["pipeline"]
 
     prediction = pipeline.predict([combined_text])[0]
     
-    # Calculate how confident the AI is (0.0 to 1.0)
     probabilities = pipeline.predict_proba([combined_text])[0]
     confidence = max(probabilities)
     
@@ -116,7 +100,6 @@ def generate_reply(request: DraftRequest):
     full_prompt = f"{system_prompt}\n\nHere is the email to reply to:\n{request.email_body}"
 
     try:
-         # Makes AI call
          response = client.models.generate_content(
              model='gemini-2.5-flash',
              contents =full_prompt
