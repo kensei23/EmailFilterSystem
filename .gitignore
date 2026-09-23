@@ -37,6 +37,8 @@ Thumbs.db
 # Logs and rubbish
 # ==========================================
 *.log
+__pycache__/
+*.pyc
 
 # Secrets
 config.properties
